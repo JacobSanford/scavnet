@@ -1,0 +1,21 @@
+debug = true
+
+[performance]
+screen_redraw_rate = 288
+
+[paths]
+data_dir = "data"
+network_library = "networks.yaml"
+transmission_library = "transmissions/sets.yaml"
+
+[volumes]
+transmission_sink_volume = 1.0
+hiss_whitenoise_sink_volume = 0.05
+
+[timings]
+transmission_gap_min_time = 120
+transmission_gap_max_time = 240
+hiss_preroll_min_time = 0.7
+hiss_preroll_max_time = 1.1
+hiss_postroll_min_time = 0.5
+hiss_postroll_max_time = 2.0

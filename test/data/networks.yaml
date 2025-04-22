@@ -1,0 +1,12 @@
+networks:
+  -
+    name: "pubnet"
+    start_freq: 25000000 
+    end_freq: 512000000
+    step: 10
+  -
+    name: "scavnet"
+    start_freq: 758000000
+    end_freq: 824000000
+    step: 10
+  # 849–869 MHz, 895–960 MHz, and 1240–1300 MHz

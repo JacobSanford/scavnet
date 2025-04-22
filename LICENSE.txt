@@ -1,0 +1,21 @@
+scavnet is dual-licensed under the GNU Affero General Public License v3 (AGPLv3) and a commercial license.
+
+## Open Source License (AGPLv3)
+This software is available under the GNU AGPLv3 license. If you distribute, host, or create derivative works of this software over a network, the AGPLv3 requires you to provide the complete corresponding source code under the same license.
+
+The full AGPLv3 license text is available in the LICENSE-AGPL.txt file or at:
+https://www.gnu.org/licenses/agpl-3.0.html
+
+## Commercial License
+A commercial license is available for those who require proprietary use, wish to distribute the software under different terms, or require additional support. 
+
+For commercial licensing inquiries, please contact:
+jsanford@unb.ca
+
+## Choosing a License
+- If you are using this software under AGPLv3, you must comply with its terms.
+- If AGPLv3 does not meet your needs, a commercial license is available.
+
+For more details, visit: [Your Website or Licensing Page]
+
+© 2025 Jacob Sanford
