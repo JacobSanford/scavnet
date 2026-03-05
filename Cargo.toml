@@ -22,9 +22,10 @@ rodio = { version = "0.20.1", features = ["noise"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.34"
 spectrum-analyzer = "1.6.0"
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "sync", "macros", "time"] }
 uuid = { version = "1.11.1", features = ["v4"] }
 
 [profile.release]
 lto = true
 opt-level = 3
+codegen-units = 1
