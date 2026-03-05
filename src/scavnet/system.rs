@@ -13,7 +13,7 @@ impl System {
 
     pub fn debug_log(&mut self, event: String) {
         let debug = SETTINGS.lock().get_bool("debug").unwrap_or(false);
-        if debug == true {
+        if debug {
             self.log(event);
         }
     }
@@ -25,10 +25,6 @@ impl System {
             event
         );
         self.log_events.push(event);
-    }
-
-    pub fn _get_logs(&self) -> &Vec<String> {
-        &self.log_events
     }
 
     pub fn get_last_x_logs(&self, x: usize) -> &[String] {

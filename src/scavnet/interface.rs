@@ -177,8 +177,8 @@ impl MainInterface {
                         KeyCode::Esc => {
                             navigation_state.region = InterfaceRegion::None;
                         },
-                        KeyCode::Char(c) if ('1'..='9').contains(&c) => {
-                            let trigger = c.to_string().parse::<usize>().unwrap();
+                        KeyCode::Char(_c) if ('1'..='9').contains(&_c) => {
+                            // TODO: implement number key triggers
                         },
                         _ => {},
                     }

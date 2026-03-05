@@ -52,10 +52,6 @@ impl Scanner {
         }
     }
 
-    pub fn _get_networks(&self) -> RadioNetworks {
-        self.networks.clone()
-    }
-
     pub fn start(&mut self) {
         self.scanning = true;
         self.status = "Scanning...".to_string();
@@ -67,7 +63,7 @@ impl Scanner {
 
     pub fn pause_for_playback(&mut self) {
         self.pause();
-        self.status = "Recieving transmission...".to_string();
+        self.status = "Receiving transmission...".to_string();
     }
 
     pub fn resume_after_playback(&mut self) {
@@ -75,7 +71,7 @@ impl Scanner {
     }
 
     pub fn next_freq(&mut self) -> Option<u32> {
-        if (!self.scanning) {
+        if !self.scanning {
             return None;
         }
         self.cur_frequency = self.freq_iter.next().unwrap_or(0);
