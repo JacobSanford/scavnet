@@ -79,56 +79,56 @@ async fn main() {
             interface.react_to_key_events(key);
         }
 
-        if let Some(current_freq) = scanner.next_freq() {
-            director.queue.transmissions.retain(|trans| {
-                if trans.frequency == current_freq {
-                    system.log(format!("Signal Detected! Frequency: {}.", scanner.cur_freq_display()));
-                    let (transmission_volume, hiss_volume) = get_volumes();
-                    scanner.pause_for_playback();
-
-                    // Play the transmission.
-                    let sink = Sink::try_new(&stream_handle).unwrap();
-
-                    let mut items_iter = trans.items.iter();
-                    play_hiss(trans.hiss_preroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
-
-                    while let Some(item) = items_iter.next() {
-                        system.debug_log(format!("Playing transmission item: {}", item.id));
-
-                        let cursor = std::io::Cursor::new(item.file_bytes.clone());
-                        let source = match rodio::Decoder::new(cursor) {
-                            Ok(s) => s,
-                            Err(e) => {
-                                system.log(format!("Failed to decode audio {}: {}", item.id, e));
-                                continue;
-                            }
-                        };
-
-                        sink.set_volume(transmission_volume);
-                        sink.append(source);
-
-                        update_fft_data_during_playback(&sink, item.duration, &item.fft_data, &mut scanner, &mut system, &mut interface, frame_time);
-
-                        if item.sleep_after > 0.0 {
-                            play_hiss(item.sleep_after, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
-                        }
-                    }
-
-                    play_hiss(trans.hiss_postroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
-                    system.log(format!("Signal Lost on frequency {}", scanner.cur_freq_display()));
-                    scanner.resume_after_playback();
-                    false
-                } else {
-                    true
-                }
-            });
-        }
-
         if last_frame_time.elapsed() >= frame_time {
 
             while let Ok(data) = queue_rx.try_recv() {
                 system.debug_log(format!("Received new transmission: {}", data.id));
                 director.queue.add(data);
+            }
+
+            if let Some(current_freq) = scanner.next_freq() {
+                director.queue.transmissions.retain(|trans| {
+                    if trans.frequency == current_freq {
+                        system.log(format!("Signal Detected! Frequency: {}.", scanner.cur_freq_display()));
+                        let (transmission_volume, hiss_volume) = get_volumes();
+                        scanner.pause_for_playback();
+
+                        // Play the transmission.
+                        let sink = Sink::try_new(&stream_handle).unwrap();
+
+                        let mut items_iter = trans.items.iter();
+                        play_hiss(trans.hiss_preroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
+
+                        while let Some(item) = items_iter.next() {
+                            system.debug_log(format!("Playing transmission item: {}", item.id));
+
+                            let cursor = std::io::Cursor::new(item.file_bytes.clone());
+                            let source = match rodio::Decoder::new(cursor) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    system.log(format!("Failed to decode audio {}: {}", item.id, e));
+                                    continue;
+                                }
+                            };
+
+                            sink.set_volume(transmission_volume);
+                            sink.append(source);
+
+                            update_fft_data_during_playback(&sink, item.duration, &item.fft_data, &mut scanner, &mut system, &mut interface, frame_time);
+
+                            if item.sleep_after > 0.0 {
+                                play_hiss(item.sleep_after, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
+                            }
+                        }
+
+                        play_hiss(trans.hiss_postroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
+                        system.log(format!("Signal Lost on frequency {}", scanner.cur_freq_display()));
+                        scanner.resume_after_playback();
+                        false
+                    } else {
+                        true
+                    }
+                });
             }
 
             scanner.simulate_noise();
