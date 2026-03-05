@@ -33,10 +33,10 @@ impl TransmissionOpenAI {
 
             let messages = vec![Message { role: Role::User, content: data.prompt.clone() }];
 
-            // In-progrss. Need to get the API key from the environment.
-            let api_key = "sk-proj-";
+            // Get the API key from the environment.
+            let api_key = std::env::var("OPENAI_API_KEY")
+                .map_err(|_| "OPENAI_API_KEY environment variable not set")?;
             let auth = Auth::new(&api_key);
-            // let auth = Auth::from_env().unwrap();
             let openai = OpenAI::new(auth, "https://api.openai.com/v1/");
             let body = ChatBody {
                 model: "gpt-4o".to_string(),
@@ -72,8 +72,7 @@ impl TransmissionOpenAI {
                     .create_speech(parameters)
                     .await?;
                 
-                // generate a random file name in /tmp
-                let file_path = format!("/tmp/{}.wav", Uuid::new_v4());
+                let file_path = format!("{}/{}.wav", std::env::temp_dir().display(), Uuid::new_v4());
                 response
                     .save(file_path.clone())
                     .await?;
