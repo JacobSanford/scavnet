@@ -1,6 +1,6 @@
-use std::error::Error;
+use std::time::Instant;
 
-use quanta::Instant;
+use anyhow::{Context, Result};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -53,7 +53,7 @@ impl Director {
         }
     }
 
-    pub async fn new(rng: StdRng) -> Result<Self, Box<dyn Error>> {
+    pub async fn new(rng: StdRng) -> Result<Self> {
         let mut director = Director::empty();
         director.network_path = network_library_path();
         director.library_path = transmission_library_path();
@@ -82,7 +82,7 @@ impl Director {
         self.max_queue_delay = max_delay;
     }
 
-    pub async fn reload(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn reload(&mut self) -> Result<()> {
         self.load_networks().await?;
         self.load_library().await?;
         self.next_queue_time = Self::never();
@@ -100,12 +100,12 @@ impl Director {
         Ok(())
     }
 
-    async fn load_networks(&mut self) -> Result<(), Box<dyn Error>> {
+    async fn load_networks(&mut self) -> Result<()> {
         self.networks = RadioNetworks::from_yaml(&self.network_path).await?;
         Ok(())
     }
 
-    async fn load_library(&mut self) -> Result<(), Box<dyn Error>> {
+    async fn load_library(&mut self) -> Result<()> {
         self.library = build_transmission_library(&self.library_path).await?;
         Ok(())
     }
@@ -128,26 +128,28 @@ impl Director {
         Instant::now() >= self.next_queue_time
     }
 
-    pub async fn get_new_transmission(&self) -> Transmission {
-        let new_transmission = self.get_random_transmission().await.unwrap();
-        new_transmission
+    pub async fn get_new_transmission(&self) -> Result<Transmission> {
+        self.get_random_transmission().await
     }
 
-    pub async fn get_random_transmission(&self) -> Result<Transmission, Box<dyn Error>> {
-        let conversation = self.get_random_conversation();
+    pub async fn get_random_transmission(&self) -> Result<Transmission> {
+        let conversation = self.get_random_conversation()?;
         let hiss_preroll = rand_time_secs(&mut self.rng.clone(), self.hiss_preroll_min_time, self.hiss_preroll_max_time);
         let hiss_postroll = rand_time_secs(&mut self.rng.clone(), self.hiss_postroll_min_time, self.hiss_postroll_max_time);
         build_transmission(conversation, self.networks.clone(), hiss_preroll, hiss_postroll).await
     }
-    
-    fn get_random_conversation(&self) -> Conversation {
+
+    fn get_random_conversation(&self) -> Result<Conversation> {
         let path_string = {
             let selected_node = self.library.choose(&mut self.rng.clone());
-            selected_node.data.clone().unwrap()
+            selected_node.data.clone()
+                .context("Selected library node has no data path")?
         };
-        let mut set = TransmissionSet::from_yaml(&path_string).unwrap();
-        let conversation = set.get_conversation().unwrap();
-        conversation.clone()
+        let mut set = TransmissionSet::from_yaml(&path_string)
+            .with_context(|| format!("Failed to load transmission set: {}", path_string))?;
+        let conversation = set.get_conversation()
+            .context("No conversation available in transmission set")?;
+        Ok(conversation.clone())
     }
 
 }

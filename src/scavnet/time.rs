@@ -1,5 +1,4 @@
-use std::time::Duration;
-use quanta::Instant;
+use std::time::{Duration, Instant};
 use rand::rngs::StdRng;
 use rand::Rng;
 

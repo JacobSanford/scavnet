@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
@@ -50,7 +49,7 @@ pub struct TransmissionSet {
 }
 
 impl TransmissionSet {
-    pub fn from_yaml(file_path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_yaml(file_path: &str) -> anyhow::Result<Self> {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
         let mut transmission_set: TransmissionSet = from_reader(reader)?;

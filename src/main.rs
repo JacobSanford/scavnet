@@ -87,7 +87,13 @@ async fn main() {
                         system.debug_log(format!("Playing transmission item: {}", item.id));
 
                         let cursor = std::io::Cursor::new(item.file_bytes.clone());
-                        let source = rodio::Decoder::new(cursor).unwrap();
+                        let source = match rodio::Decoder::new(cursor) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                system.log(format!("Failed to decode audio {}: {}", item.id, e));
+                                continue;
+                            }
+                        };
 
                         sink.set_volume(transmission_volume);
                         sink.append(source);
@@ -150,14 +156,17 @@ async fn transmission_builder(
     queue_tx: mpsc::Sender<Transmission>,
     director: Director,
 ) {
-
     while let Some(_) = signal_rx.recv().await {
-        let data = director.get_new_transmission().await;
-        if queue_tx.send(data).await.is_err() {
-            println!("Main loop dropped, exiting background task.");
-            break;
+        match director.get_new_transmission().await {
+            Ok(data) => {
+                if queue_tx.send(data).await.is_err() {
+                    break;
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to build transmission: {}", e);
+            }
         }
-
     }
 }
 

@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{self, BufReader, Read};
 
+use anyhow::Context;
 use rand::seq::SliceRandom;
 
 use crate::scavnet::fft::fft_cached_normalized;
@@ -27,19 +28,22 @@ pub struct TransmissionItem {
 }
 
 impl TransmissionItem {
-    pub fn new(id: String, caption: String, file_path: String, sleep_after: f32) -> Self {
-        let reader: hound::WavReader<io::BufReader<File>> = hound::WavReader::open(file_path.clone()).unwrap();
+    pub fn new(id: String, caption: String, file_path: String, sleep_after: f32) -> anyhow::Result<Self> {
+        let reader: hound::WavReader<io::BufReader<File>> = hound::WavReader::open(&file_path)
+            .with_context(|| format!("Failed to open WAV file: {}", file_path))?;
         let duration = reader.duration();
         let sample_rate = reader.spec().sample_rate as f32;
         let duration_seconds = duration as f32 / sample_rate;
-        let fft_data = fft_cached_normalized(file_path.as_str()).unwrap();
+        let fft_data = fft_cached_normalized(file_path.as_str())
+            .with_context(|| format!("Failed to compute FFT for: {}", file_path))?;
 
-        let file = File::open(file_path.clone()).unwrap();
+        let file = File::open(&file_path)
+            .with_context(|| format!("Failed to read file bytes: {}", file_path))?;
         let mut buf_reader = BufReader::new(file);
         let mut file_bytes = Vec::new();
-        buf_reader.read_to_end(&mut file_bytes).unwrap();
+        buf_reader.read_to_end(&mut file_bytes)?;
 
-        Self {
+        Ok(Self {
             id,
             duration: duration_seconds,
             caption,
@@ -47,7 +51,7 @@ impl TransmissionItem {
             sleep_after,
             file_bytes,
             fft_data,
-        }
+        })
     }
 
 }

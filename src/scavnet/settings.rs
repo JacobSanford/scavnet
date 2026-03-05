@@ -31,10 +31,13 @@ pub fn init_settings() -> (u128, bool) {
 }
 
 pub fn load_settings() {
-    *SETTINGS.lock() = Config::builder()
+    match Config::builder()
         .add_source(config::File::with_name("Settings"))
         .build()
-        .unwrap();
+    {
+        Ok(config) => *SETTINGS.lock() = config,
+        Err(e) => eprintln!("Warning: Failed to load Settings file, using defaults: {}", e),
+    }
 }
 
 pub fn network_library_path() -> String {

@@ -1,4 +1,4 @@
-use std::error::Error;
+use anyhow::Result;
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub struct TransmissionOpenAI {
 }
 
 impl TransmissionOpenAI {
-    pub async fn build(conversation: Conversation, networks: RadioNetworks, hiss_preroll: f32, hiss_postroll: f32) -> Result<Transmission, Box<dyn Error>>  {
+    pub async fn build(conversation: Conversation, networks: RadioNetworks, hiss_preroll: f32, hiss_postroll: f32) -> Result<Transmission> {
         let mut transmission = init_transmission(conversation.clone(), networks)?;
         transmission.hiss_preroll = hiss_preroll;
         transmission.hiss_postroll = hiss_postroll;
@@ -35,7 +35,7 @@ impl TransmissionOpenAI {
 
             // Get the API key from the environment.
             let api_key = std::env::var("OPENAI_API_KEY")
-                .map_err(|_| "OPENAI_API_KEY environment variable not set")?;
+                .map_err(|_| anyhow::anyhow!("OPENAI_API_KEY environment variable not set"))?;
             let auth = Auth::new(&api_key);
             let openai = OpenAI::new(auth, "https://api.openai.com/v1/");
             let body = ChatBody {
@@ -82,13 +82,13 @@ impl TransmissionOpenAI {
                     sleep_after = Self::get_delay(item.clone()) as f32;
                 }
     
-                let transmission_item = TransmissionItem::new(
-                    item.id.clone(),
-                    item.captions[0].clone(),
-                    file_path,
-                    sleep_after,
-                );
-    
+                let id = item.id.clone();
+                let caption = item.captions[0].clone();
+                let path = file_path;
+                let transmission_item = tokio::task::spawn_blocking(move || {
+                    TransmissionItem::new(id, caption, path, sleep_after)
+                }).await??;
+
                 transmission.add_item(transmission_item);
             }
         }

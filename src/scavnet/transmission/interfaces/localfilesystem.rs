@@ -1,5 +1,4 @@
-use std::error::Error;
-
+use anyhow::Result;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +11,7 @@ pub struct TransmissionLocalFileSystem {
 }
 
 impl TransmissionLocalFileSystem {
-    pub async fn build(conversation: Conversation, networks: RadioNetworks, hiss_preroll: f32, hiss_postroll: f32) -> Result<Transmission, Box<dyn Error>>  {
+    pub async fn build(conversation: Conversation, networks: RadioNetworks, hiss_preroll: f32, hiss_postroll: f32) -> Result<Transmission> {
         let mut transmission = init_transmission(conversation.clone(), networks)?;
         transmission.id = conversation.id.clone();
         transmission.hiss_preroll = hiss_preroll;
@@ -31,12 +30,12 @@ impl TransmissionLocalFileSystem {
                 sleep_after = Self::get_delay(item.clone()) as f32;
             }
 
-            let transmission_item = TransmissionItem::new(
-                item.id.clone(),
-                item.captions[0].clone(),
-                file_path_string.clone(),
-                sleep_after,
-            );
+            let id = item.id.clone();
+            let caption = item.captions[0].clone();
+            let path = file_path_string.clone();
+            let transmission_item = tokio::task::spawn_blocking(move || {
+                TransmissionItem::new(id, caption, path, sleep_after)
+            }).await??;
 
             transmission.add_item(transmission_item);
         }

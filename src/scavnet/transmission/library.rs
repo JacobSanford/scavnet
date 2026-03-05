@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -81,7 +80,7 @@ impl TransmissionSetNode {
         node
     }
 
-    pub fn load_tree_from_yaml_file(file_path: &Path) -> Result<TransmissionSetNode, Box<dyn std::error::Error>> {
+    pub fn load_tree_from_yaml_file(file_path: &Path) -> Result<TransmissionSetNode, anyhow::Error> {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
         let root_set: RootSet = from_reader(reader)?;
@@ -120,13 +119,13 @@ impl TransmissionLibrary {
         self.library.traverse(rng)
     }
 
-    pub fn build(file_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn build(file_path: &Path) -> Result<Self, anyhow::Error> {
         let library = TransmissionSetNode::load_tree_from_yaml_file(file_path)?;
         Ok(Self::new(library))
     }
 }
 
-pub async fn build_transmission_library(file_path: &str) -> Result<TransmissionLibrary, Box<dyn Error>> {
+pub async fn build_transmission_library(file_path: &str) -> Result<TransmissionLibrary, anyhow::Error> {
     let transmission_path = std::path::Path::new(&file_path);
     precompute_library_ffts();
     TransmissionLibrary::build(transmission_path)

@@ -12,7 +12,7 @@ impl System {
     }
 
     pub fn debug_log(&mut self, event: String) {
-        let debug = SETTINGS.lock().get_bool("debug").unwrap();
+        let debug = SETTINGS.lock().get_bool("debug").unwrap_or(false);
         if debug == true {
             self.log(event);
         }

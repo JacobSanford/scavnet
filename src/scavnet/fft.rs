@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::fs::{self, File};
 use std::path::Path;
 use std::io::{self, BufWriter, BufReader};
@@ -36,7 +35,7 @@ pub fn write_fft_all_wav_files_in_dir(dir: &Path) {
     }
 }
 
-pub fn write_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn write_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let normalized_data = fft_from_path(file_path)?;
     let fft_data_filepath = format!("{}.fft", file_path);
 
@@ -55,11 +54,11 @@ pub fn write_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> 
     Ok(normalized_data)
 }
 
-pub fn read_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn read_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let fft_data_filepath = format!("{}.fft", file_path);
     // If the file doesn't exist, return an error
     if !std::path::Path::new(&fft_data_filepath).exists() {
-        return Err(Box::from("FFT data file does not exist"));
+        return Err(anyhow::anyhow!("FFT data file does not exist"));
     }
     let file = File::open(&fft_data_filepath)?;
     let reader = BufReader::new(file);
@@ -67,12 +66,12 @@ pub fn read_fft_data(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
     Ok(fft_data.0)
 }
 
-pub fn fft_normalized_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn fft_normalized_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let mut reader: hound::WavReader<io::BufReader<File>> = hound::WavReader::open(file_path)?;
     fft_normalized(&mut reader)
 }
 
-pub fn fft_cached_normalized(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn fft_cached_normalized(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let fft_data = read_fft_data(file_path);
     if fft_data.is_ok() {
         return Ok(fft_data.unwrap());
@@ -81,13 +80,13 @@ pub fn fft_cached_normalized(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn E
     Ok(fft_data)
 }
 
-pub fn fft_normalized(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn fft_normalized(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let fft_data = fft(reader)?;
     let normalized_data = normalize_fft_data(fft_data)?;
     Ok(normalized_data)
 }
 
-pub fn normalize_fft_data(fft_data: Vec<Vec<f32>>) -> Result<Vec<Vec<f32>>, Box<dyn Error>>  {
+pub fn normalize_fft_data(fft_data: Vec<Vec<f32>>) -> Result<Vec<Vec<f32>>, anyhow::Error>  {
     let mut normalized_data: Vec<Vec<f32>> = Vec::new();
     let maximum_value = FFT_MAX_VALUE;
     let current_max = fft_data.iter()
@@ -108,12 +107,12 @@ pub fn normalize_fft_data(fft_data: Vec<Vec<f32>>) -> Result<Vec<Vec<f32>>, Box<
     Ok(normalized_data)
 }
 
-pub fn fft_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn fft_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let mut reader: hound::WavReader<io::BufReader<File>> = hound::WavReader::open(file_path)?;
     fft(&mut reader)
 }
 
-pub fn fft(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, Box<dyn Error>> {
+pub fn fft(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let wav_sample_rate = reader.spec().sample_rate;
     let samples: Vec<f32> = reader.samples::<i16>()
         .map(|s| s.unwrap() as f32)

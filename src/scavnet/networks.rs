@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -21,29 +20,29 @@ impl RadioNetwork {
     const ERROR_START_FREQ_GREATER_THAN_END_FREQ: &'static str = "Start_freq must be less than end_freq.";
     const ERROR_STEP_NOT_FACTOR: &'static str = "Step must be a factor of the difference between start_freq and end_freq.";
 
-    pub fn validate_values(&self) -> Result<(), Box<dyn Error>> {
+    pub fn validate_values(&self) -> Result<(), anyhow::Error> {
         if self.name.is_empty() {
-            return Err(Self::ERROR_NO_NAME.into());
+            return Err(anyhow::anyhow!(Self::ERROR_NO_NAME));
         }
 
         if self.start_freq == 0 {
-            return Err(Self::ERROR_NO_START_FREQ.into());
+            return Err(anyhow::anyhow!(Self::ERROR_NO_START_FREQ));
         }
 
         if self.end_freq == 0 {
-            return Err(Self::ERROR_NO_END_FREQ.into());
+            return Err(anyhow::anyhow!(Self::ERROR_NO_END_FREQ));
         }
 
         if self.step == 0 {
-            return Err(Self::ERROR_NO_STEP.into());
+            return Err(anyhow::anyhow!(Self::ERROR_NO_STEP));
         }
 
         if self.start_freq >= self.end_freq {
-            return Err(Self::ERROR_START_FREQ_GREATER_THAN_END_FREQ.into());
+            return Err(anyhow::anyhow!(Self::ERROR_START_FREQ_GREATER_THAN_END_FREQ));
         }
 
         if (self.end_freq - self.start_freq) % self.step != 0 {
-            return Err(Self::ERROR_STEP_NOT_FACTOR.into());
+            return Err(anyhow::anyhow!(Self::ERROR_STEP_NOT_FACTOR));
         }
 
         Ok(())
@@ -70,7 +69,7 @@ impl RadioNetworks {
         }
     }
 
-    pub async fn from_yaml(file_path: &str) -> Result<RadioNetworks, Box<dyn Error>> {
+    pub async fn from_yaml(file_path: &str) -> Result<RadioNetworks, anyhow::Error> {
         let mut networks = Self::read_from_yaml(file_path).await?;
         networks.validate_values().await?;
         networks.build_scan_frequencies();
@@ -79,7 +78,7 @@ impl RadioNetworks {
         Ok(networks)
     }
 
-    pub async fn read_from_yaml(file_path: &str) -> Result<RadioNetworks, Box<dyn Error>> {
+    pub async fn read_from_yaml(file_path: &str) -> Result<RadioNetworks, anyhow::Error> {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
         let networks = from_reader(reader)?;
@@ -108,9 +107,9 @@ impl RadioNetworks {
         self.scan_frequencies.clone()
     }
 
-    pub async fn validate_values(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn validate_values(&self) -> Result<(), anyhow::Error> {
         if self.networks.is_empty() {
-            return Err(Self::ERROR_NO_NETWORKS.into());
+            return Err(anyhow::anyhow!(Self::ERROR_NO_NETWORKS));
         }
 
         self.validate_network_values().await?;
@@ -118,7 +117,7 @@ impl RadioNetworks {
         Ok(())
     }
 
-    pub async fn validate_network_values(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn validate_network_values(&self) -> Result<(), anyhow::Error> {
         for network in &self.networks {
             network.validate_values()?;
         }
@@ -221,7 +220,7 @@ mod tests {
     }
 }
 
-pub async fn init_networks(network_library_path: String) -> Result<RadioNetworks, Box<dyn Error>> {
+pub async fn init_networks(network_library_path: String) -> Result<RadioNetworks, anyhow::Error> {
     let radio_networks_result = RadioNetworks::from_yaml(network_library_path.as_str()).await?;
     Ok(radio_networks_result)
 }
