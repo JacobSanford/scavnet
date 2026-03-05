@@ -96,15 +96,15 @@ impl RadioNetworks {
 
     pub fn build_scan_frequencies(&mut self) {
         self.scan_frequencies.clear();
-        for network in self.networks.clone() {
+        for network in &self.networks {
             for freq in (network.start_freq..network.end_freq).step_by(network.step as usize) {
                 self.scan_frequencies.push(freq as u32);
             }
         }
     }
 
-    pub fn scan_frequencies(&self) -> Vec<u32> {
-        self.scan_frequencies.clone()
+    pub fn scan_frequencies(&self) -> &[u32] {
+        &self.scan_frequencies
     }
 
     pub async fn validate_values(&self) -> Result<(), anyhow::Error> {

@@ -30,7 +30,7 @@ impl Scanner {
     }
 
     pub fn new(networks: RadioNetworks) -> Self {
-        let scan_frequencies = networks.scan_frequencies();
+        let scan_frequencies = networks.scan_frequencies().to_vec();
         let cur_frequency = scan_frequencies.first().cloned().unwrap_or(0);
         let freq_iter = scan_frequencies.into_iter().cycle();
         let noise_profile: Vec<Vec<f32>> = (0..256)
@@ -90,8 +90,8 @@ impl Scanner {
         self.fftdata = fftdata;
     }
 
-    pub fn get_fft_data(&self) -> Vec<f32> {
-        self.fftdata.clone()
+    pub fn get_fft_data(&self) -> &[f32] {
+        &self.fftdata
     }
 
     pub fn is_scanning(&self) -> bool {
@@ -99,23 +99,23 @@ impl Scanner {
     }
 
     pub fn simulate_noise(&mut self) {
-        let data = &self.noise_profile[self.noise_index];
-        self.update_fft_data(data.clone());
+        let data = self.noise_profile[self.noise_index].clone();
+        self.update_fft_data(data);
         self.noise_index = (self.noise_index + 1) % self.noise_profile.len();
     }
 
     pub fn simulate_hiss_noise(&mut self) {
         let data = self.noise_profile[self.noise_index].iter().map(|x| x * 2.5).collect::<Vec<f32>>();
-        self.update_fft_data(data.clone());
+        self.update_fft_data(data);
         self.noise_index = (self.noise_index + 1) % self.noise_profile.len();
     }
 
-    pub fn status(&self) -> String {
-        self.status.clone()
+    pub fn status(&self) -> &str {
+        &self.status
     }
 
     pub fn cur_network_name(&self) -> String {
-        self.networks.network_name_from_freq(self.cur_frequency as u64).unwrap_or("Unknown".to_string().to_uppercase())
+        self.networks.network_name_from_freq(self.cur_frequency as u64).unwrap_or_else(|| "UNKNOWN".to_string())
     }
 
 }

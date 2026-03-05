@@ -144,7 +144,7 @@ impl MainInterface {
     }
 
     pub fn get_exit(&self) -> bool{
-        SIG_EXIT.lock().clone()
+        *SIG_EXIT.lock()
     }
 
     fn render(&mut self, render_callback: fn(&mut Frame, &Scanner, &System), scanner: &Scanner, system: &System) {

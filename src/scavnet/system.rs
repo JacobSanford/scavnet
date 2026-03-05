@@ -31,12 +31,12 @@ impl System {
         &self.log_events
     }
 
-    pub fn get_last_x_logs(&self, x: usize) -> Vec<String> {
+    pub fn get_last_x_logs(&self, x: usize) -> &[String] {
         let len = self.log_events.len();
         if x >= len {
-            self.log_events.clone()
+            &self.log_events
         } else {
-            self.log_events[len - x..].to_vec()
+            &self.log_events[len - x..]
         }
     }
 }
