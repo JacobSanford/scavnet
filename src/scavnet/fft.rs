@@ -18,15 +18,21 @@ const FFT_NORMALIZATION_FACTOR: f32 = 2.5;
 struct FFTData(Vec<Vec<f32>>);
 
 pub fn write_fft_all_wav_files_in_dir(dir: &Path) {
-    let mut files = fs::read_dir(dir).unwrap();
-    while let Some(file) = files.next() {
-        let file = file.unwrap();
-        let path = file.path();
+    let files = match fs::read_dir(dir) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to read directory {:?}: {}", dir, e);
+            return;
+        }
+    };
+    for entry in files.flatten() {
+        let path = entry.path();
         if path.is_file() {
-            if path.extension().unwrap() == "wav" {
-                let path_str = path.to_str().unwrap();
-                if let Err(e) = write_fft_data(&path_str) {
-                    eprintln!("Error writing FFT data: {}", e);
+            if path.extension().is_some_and(|ext| ext == "wav") {
+                if let Some(path_str) = path.to_str() {
+                    if let Err(e) = write_fft_data(path_str) {
+                        eprintln!("Error writing FFT data for {:?}: {}", path, e);
+                    }
                 }
             }
         } else if path.is_dir() {
@@ -72,12 +78,10 @@ pub fn fft_normalized_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow
 }
 
 pub fn fft_cached_normalized(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
-    let fft_data = read_fft_data(file_path);
-    if fft_data.is_ok() {
-        return Ok(fft_data.unwrap());
+    if let Ok(data) = read_fft_data(file_path) {
+        return Ok(data);
     }
-    let fft_data = fft_normalized_from_path(file_path)?;
-    Ok(fft_data)
+    fft_normalized_from_path(file_path)
 }
 
 pub fn fft_normalized(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, anyhow::Error> {
@@ -98,7 +102,7 @@ pub fn normalize_fft_data(fft_data: Vec<Vec<f32>>) -> Result<Vec<Vec<f32>>, anyh
     // Normalize the data
     let normalization_factor = maximum_value / current_max * FFT_NORMALIZATION_FACTOR;
     for item in fft_data {
-        let normalized_item: Vec<f32> = item.par_iter()
+        let normalized_item: Vec<f32> = item.iter()
             .map(|&x| x * normalization_factor)
             .collect();
         normalized_data.push(normalized_item);
@@ -115,7 +119,8 @@ pub fn fft_from_path(file_path: &str) -> Result<Vec<Vec<f32>>, anyhow::Error> {
 pub fn fft(reader: &mut hound::WavReader<io::BufReader<File>>) -> Result<Vec<Vec<f32>>, anyhow::Error> {
     let wav_sample_rate = reader.spec().sample_rate;
     let samples: Vec<f32> = reader.samples::<i16>()
-        .map(|s| s.unwrap() as f32)
+        .filter_map(|s| s.ok())
+        .map(|s| s as f32)
         .collect();
 
     let window_size = HANN_WINDOW_SIZE;
