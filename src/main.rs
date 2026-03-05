@@ -1,16 +1,13 @@
 use std::{
-    io,
     ops::Add,
-    thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use config::Config;
 use cpal::SampleRate;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{self, Event, KeyEvent};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use quanta::Instant;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rodio::{OutputStream, Sink};
@@ -26,7 +23,6 @@ use scavnet::system::System;
 use scavnet::transmission::core::Transmission;
 
 lazy_static! {
-    static ref LAST_KEYEVENT: Mutex<KeyEvent> = Mutex::new(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE));
     static ref SETTINGS: Mutex<Config> = Mutex::new(Config::builder().build().unwrap());
 }
 
@@ -43,7 +39,7 @@ async fn main() {
 
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
-    let director_result = Director::new(rng.clone()).await;
+    let director_result = Director::new(rng).await;
     let mut director = match director_result {
         Ok(director) => director,
         Err(e) => {
@@ -55,7 +51,6 @@ async fn main() {
     tokio::spawn(transmission_builder(signal_rx, queue_tx, director.clone()));
 
     let mut scanner = Scanner::new(director.get_networks().clone());
-    let mut cycles: u128 = 0;
     let mut system = System::new();
     let mut interface = MainInterface::new();
 
@@ -71,8 +66,9 @@ async fn main() {
     system.log("Ready!".to_string());
 
     while !interface.get_exit() {
-        handle_key_events_thread();
-        interface.react_to_key_events();
+        if let Some(key) = poll_key_event() {
+            interface.react_to_key_events(key);
+        }
 
         if let Some(current_freq) = scanner.next_freq() {
             director.queue.transmissions.retain(|trans| {
@@ -85,7 +81,7 @@ async fn main() {
                     let sink = Sink::try_new(&stream_handle).unwrap();
 
                     let mut items_iter = trans.items.iter();
-                    cycles = play_hiss(trans.hiss_preroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, cycles, screen_redraw_rate);
+                    play_hiss(trans.hiss_preroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
 
                     while let Some(item) = items_iter.next() {
                         system.debug_log(format!("Playing transmission item: {}", item.id));
@@ -96,14 +92,14 @@ async fn main() {
                         sink.set_volume(transmission_volume);
                         sink.append(source);
 
-                        cycles = update_fft_data_during_playback(&sink, item.duration, &item.fft_data, &mut scanner, &mut system, cycles, &mut interface, screen_redraw_rate);
+                        update_fft_data_during_playback(&sink, item.duration, &item.fft_data, &mut scanner, &mut system, &mut interface, frame_time);
 
                         if item.sleep_after > 0.0 {
-                            cycles = play_hiss(item.sleep_after, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, cycles, screen_redraw_rate);
+                            play_hiss(item.sleep_after, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
                         }
                     }
 
-                    cycles = play_hiss(trans.hiss_postroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, cycles, screen_redraw_rate);
+                    play_hiss(trans.hiss_postroll, hiss_volume, &sink, &mut scanner, &mut interface, &mut system, frame_time);
                     system.log(format!("Signal Lost on frequency {}", scanner.cur_freq_display()));
                     scanner.resume_after_playback();
                     false
@@ -125,7 +121,7 @@ async fn main() {
             if director.needs_queueing() {
                 system.debug_log("Queueing new transmission.".to_string());
                 if let Err(_) = signal_tx.try_send(()) {
-                    panic!("Failed to signal builder.");
+                    eprintln!("Failed to signal builder.");
                 }
                 director.set_next_queue_time();
             }
@@ -133,29 +129,20 @@ async fn main() {
             interface.draw(&scanner, &system);
             last_frame_time = Instant::now();
         }
-        cycles += 1;
+
+        std::thread::sleep(Duration::from_millis(1));
     }
 
-    // Loop here.
     interface.cleanup();
-
-    // Remove when releasing.
-    println!("Cycles: {}", cycles);
 }
 
-fn handle_key_events_thread() {
-    thread::spawn(|| {
-        let _ = handle_key_events();
-    });
-}
-
-fn handle_key_events() -> io::Result<bool> {
-    if event::poll(std::time::Duration::from_millis(20))? {
-        if let Event::Key(key) = event::read()? {
-            *LAST_KEYEVENT.lock() = key.clone();
+fn poll_key_event() -> Option<KeyEvent> {
+    if event::poll(Duration::ZERO).unwrap_or(false) {
+        if let Ok(Event::Key(key)) = event::read() {
+            return Some(key);
         }
     }
-    Ok(false)
+    None
 }
 
 async fn transmission_builder(
@@ -174,27 +161,29 @@ async fn transmission_builder(
     }
 }
 
-// Move these to a separate modules - scanner?
-fn update_fft_data_during_playback(sink: &Sink, file_duration: f32, fft_data: &Vec<Vec<f32>>, scanner: &mut Scanner, system: &mut System, cycles: u128, interface: &mut MainInterface, screen_redraw_rate: u128) -> u128{
+fn update_fft_data_during_playback(sink: &Sink, file_duration: f32, fft_data: &[Vec<f32>], scanner: &mut Scanner, system: &mut System, interface: &mut MainInterface, frame_time: Duration) {
     let start_time = Instant::now();
     let count_fft_data_points = fft_data.len();
     let duration_per_fft_data_point = file_duration / count_fft_data_points as f32;
     let mut next_fft_update_time = Some(start_time.add(Duration::from_secs_f32(duration_per_fft_data_point)));
     let mut fft_data_index = 0;
-    let mut cycles = cycles;
+    let mut last_frame_time = Instant::now();
 
     while !sink.empty() {
-        handle_key_events_thread();
-        interface.react_to_key_events();
+        if let Some(key) = poll_key_event() {
+            interface.react_to_key_events(key);
+        }
 
-        if cycles % screen_redraw_rate == 0 {
+        if last_frame_time.elapsed() >= frame_time {
             let now = Instant::now();
             if let Some(next_update_time) = next_fft_update_time {
                 if now >= next_update_time {
-                    scanner.update_fft_data(fft_data[fft_data_index].clone());
-                    fft_data_index += 1;
+                    if fft_data_index < count_fft_data_points {
+                        scanner.update_fft_data(fft_data[fft_data_index].clone());
+                        fft_data_index += 1;
+                    }
 
-                    if fft_data_index <= count_fft_data_points {
+                    if fft_data_index < count_fft_data_points {
                         next_fft_update_time = Some(now.add(Duration::from_secs_f32(duration_per_fft_data_point)));
                     } else {
                         next_fft_update_time = None;
@@ -202,31 +191,34 @@ fn update_fft_data_during_playback(sink: &Sink, file_duration: f32, fft_data: &V
                 }
             }
             interface.draw(&scanner, &system);
+            last_frame_time = now;
         }
-        cycles += 1;
-    }
 
-    return cycles;
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }
 
-fn play_hiss(hiss_time: f32, hiss_volume: f32, sink: &Sink, scanner: &mut Scanner, interface: &mut MainInterface, system: &mut System, cycles: u128, screen_redraw_rate: u128) -> u128 {
-    let mut local_cycles = cycles;
+fn play_hiss(hiss_time: f32, hiss_volume: f32, sink: &Sink, scanner: &mut Scanner, interface: &mut MainInterface, system: &mut System, frame_time: Duration) {
     let white_noise_source = WhiteNoise::new(SampleRate(44100));
-    let hiss_millisecs =  (hiss_time * 1000.0) as u64;
+    let hiss_millisecs = (hiss_time * 1000.0) as u64;
     let white_noise = white_noise_source.take_duration(Duration::from_millis(hiss_millisecs));
     sink.set_volume(hiss_volume);
 
     system.debug_log(format!("Generating hiss for {} seconds.", hiss_time));
     sink.append(white_noise);
 
+    let mut last_frame_time = Instant::now();
     while !sink.empty() {
-        handle_key_events_thread();
-        if local_cycles % screen_redraw_rate == 0 {
+        if let Some(key) = poll_key_event() {
+            interface.react_to_key_events(key);
+        }
+
+        if last_frame_time.elapsed() >= frame_time {
             scanner.simulate_hiss_noise();
             interface.draw(&scanner, &system);
+            last_frame_time = Instant::now();
         }
-        local_cycles += 1;
-    }
 
-    local_cycles
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }

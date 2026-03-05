@@ -18,7 +18,6 @@ use crossterm::{
         self,
         KeyCode,
         KeyEvent,
-        KeyModifiers,
     }
 };
 
@@ -154,17 +153,7 @@ impl MainInterface {
         });
     }
 
-    pub fn react_to_key_events(&mut self) {
-        let key = {
-            let key_event = super::super::LAST_KEYEVENT.lock();
-            if key_event.code == KeyCode::Null && key_event.modifiers == KeyModifiers::NONE {
-                return;
-            }
-            key_event.clone()
-        };
-
-        *super::super::LAST_KEYEVENT.lock() = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
-
+    pub fn react_to_key_events(&mut self, key: KeyEvent) {
         let mut navigation_state = NAVIGATION_STATE.lock();
 
         if key.kind == event::KeyEventKind::Press {
