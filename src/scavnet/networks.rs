@@ -157,7 +157,7 @@ mod tests {
         networks.networks[0].name = String::new();
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_NO_NAME);
     }
 
@@ -167,7 +167,7 @@ mod tests {
         networks.networks[0].start_freq = 0;
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_NO_START_FREQ);
     }
 
@@ -177,7 +177,7 @@ mod tests {
         networks.networks[0].end_freq = 0;
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_NO_END_FREQ);
     }
 
@@ -187,7 +187,7 @@ mod tests {
         networks.networks[0].step = 0;
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_NO_STEP);
     }
 
@@ -197,7 +197,7 @@ mod tests {
         networks.networks[0].start_freq = 512000001;
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_START_FREQ_GREATER_THAN_END_FREQ);
     }
 
@@ -207,16 +207,20 @@ mod tests {
         networks.networks[0].end_freq = 511999999;
         let result = networks.validate_values().await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), RadioNetwork::ERROR_STEP_NOT_FACTOR);
     }
 
+    fn test_data_path() -> String {
+        format!("{}/test/data/networks.yaml", env!("CARGO_MANIFEST_DIR"))
+    }
+
     async fn get_testing_data() -> RadioNetworks {
-        RadioNetworks::from_yaml("test/data/networks.yaml").await.unwrap()
+        RadioNetworks::from_yaml(&test_data_path()).await.unwrap()
     }
 
     async fn get_raw_testing_data() -> RadioNetworks {
-        RadioNetworks::read_from_yaml("test/data/networks.yaml").await.unwrap()
+        RadioNetworks::read_from_yaml(&test_data_path()).await.unwrap()
     }
 }
 
