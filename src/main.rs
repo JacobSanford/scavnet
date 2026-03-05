@@ -5,6 +5,7 @@ use std::{
 
 use config::Config;
 use cpal::SampleRate;
+use crossterm::ExecutableCommand;
 use crossterm::event::{self, Event, KeyEvent};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -28,6 +29,14 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() {
+    // Ensure terminal is restored on panic
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = std::io::stdout().execute(crossterm::terminal::LeaveAlternateScreen);
+        default_hook(info);
+    }));
+
     let rng = StdRng::from_entropy();
 
     let (screen_redraw_rate, debug) = init_settings();
