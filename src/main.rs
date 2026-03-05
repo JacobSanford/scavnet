@@ -163,7 +163,7 @@ fn poll_key_event() -> Option<KeyEvent> {
 async fn transmission_builder(
     mut signal_rx: mpsc::Receiver<()>,
     queue_tx: mpsc::Sender<Transmission>,
-    director: Director,
+    mut director: Director,
 ) {
     while let Some(_) = signal_rx.recv().await {
         match director.get_new_transmission().await {

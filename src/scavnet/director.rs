@@ -128,20 +128,20 @@ impl Director {
         Instant::now() >= self.next_queue_time
     }
 
-    pub async fn get_new_transmission(&self) -> Result<Transmission> {
+    pub async fn get_new_transmission(&mut self) -> Result<Transmission> {
         self.get_random_transmission().await
     }
 
-    pub async fn get_random_transmission(&self) -> Result<Transmission> {
+    pub async fn get_random_transmission(&mut self) -> Result<Transmission> {
         let conversation = self.get_random_conversation()?;
-        let hiss_preroll = rand_time_secs(&mut self.rng.clone(), self.hiss_preroll_min_time, self.hiss_preroll_max_time);
-        let hiss_postroll = rand_time_secs(&mut self.rng.clone(), self.hiss_postroll_min_time, self.hiss_postroll_max_time);
+        let hiss_preroll = rand_time_secs(&mut self.rng, self.hiss_preroll_min_time, self.hiss_preroll_max_time);
+        let hiss_postroll = rand_time_secs(&mut self.rng, self.hiss_postroll_min_time, self.hiss_postroll_max_time);
         build_transmission(conversation, self.networks.clone(), hiss_preroll, hiss_postroll).await
     }
 
-    fn get_random_conversation(&self) -> Result<Conversation> {
+    fn get_random_conversation(&mut self) -> Result<Conversation> {
         let path_string = {
-            let selected_node = self.library.choose(&mut self.rng.clone());
+            let selected_node = self.library.choose(&mut self.rng);
             selected_node.data.clone()
                 .context("Selected library node has no data path")?
         };
