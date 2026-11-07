@@ -1,3 +1,4 @@
+mod audio;
 mod range;
 mod settings;
 mod world;
@@ -26,6 +27,8 @@ struct Cli {
 enum Command {
     /// Load and validate the whole world, reporting every problem.
     Validate,
+    /// Precompute the spectrum profile of every item into the cache directory.
+    Cache,
 }
 
 fn main() -> ExitCode {
@@ -43,6 +46,7 @@ fn run_cli() -> Result<ExitCode> {
     let settings = Settings::load(cli.settings.as_deref())?;
     match cli.command.unwrap_or(Command::Validate) {
         Command::Validate => validate(&settings),
+        Command::Cache => warm_cache(&settings),
     }
 }
 
@@ -61,4 +65,17 @@ fn validate(settings: &Settings) -> Result<ExitCode> {
             Ok(ExitCode::FAILURE)
         }
     }
+}
+
+fn warm_cache(settings: &Settings) -> Result<ExitCode> {
+    let world = load_world(settings)?;
+    let mut paths: Vec<_> = world.items().map(|i| i.path.as_path()).collect();
+    paths.sort();
+    paths.dedup();
+    let started = std::time::Instant::now();
+    for path in &paths {
+        audio::spectrum::Spectrum::load_or_analyze(path, &settings.paths.cache_dir)?;
+    }
+    println!("Cached {} spectrum profiles in {:.2?}", paths.len(), started.elapsed());
+    Ok(ExitCode::SUCCESS)
 }
