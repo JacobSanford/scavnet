@@ -25,7 +25,7 @@ impl Progress {
     /// Loads progress. A missing file is a fresh start.
     pub fn load(path: &Path) -> Result<Self> {
         match std::fs::read_to_string(path) {
-            Ok(text) => serde_yaml::from_str(&text).with_context(|| format!("Failed to parse {}", path.display())),
+            Ok(text) => serde_saphyr::from_str(&text).with_context(|| format!("Failed to parse {}", path.display())),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
             Err(e) => Err(e).with_context(|| format!("Failed to read {}", path.display())),
         }
@@ -37,7 +37,7 @@ impl Progress {
             std::fs::create_dir_all(dir).with_context(|| format!("Failed to create {}", dir.display()))?;
         }
         let tmp = path.with_extension("yaml.tmp");
-        std::fs::write(&tmp, serde_yaml::to_string(self)?)
+        std::fs::write(&tmp, serde_saphyr::to_string(self)?)
             .with_context(|| format!("Failed to write {}", tmp.display()))?;
         std::fs::rename(&tmp, path).with_context(|| format!("Failed to replace {}", path.display()))?;
         Ok(())

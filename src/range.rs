@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, RngExt};
 use serde::Deserialize;
 
 /// An inclusive range of seconds, sampled uniformly. `min == max` is a fixed value.

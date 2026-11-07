@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use rand::Rng;
+use rand::{Rng, RngExt};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

@@ -10,8 +10,6 @@ pub mod sets;
 
 use std::collections::HashSet;
 use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 #[cfg(test)]
 use std::path::PathBuf;
@@ -303,8 +301,8 @@ pub fn wav_duration(path: &Path) -> Result<f32, String> {
 }
 
 fn read_yaml<T: DeserializeOwned>(path: &Path) -> Result<T, Vec<String>> {
-    let file = File::open(path).map_err(|e| vec![format!("{}: {e}", path.display())])?;
-    serde_yaml::from_reader(BufReader::new(file)).map_err(|e| vec![format!("{}: {e}", path.display())])
+    let text = std::fs::read_to_string(path).map_err(|e| vec![format!("{}: {e}", path.display())])?;
+    serde_saphyr::from_str(&text).map_err(|e| vec![format!("{}: {e}", path.display())])
 }
 
 /// Paths of the files that make up the world, for display.

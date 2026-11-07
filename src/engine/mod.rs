@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 use crate::audio::loader::{LoadRequest, LoadedClip, Loader};
 use crate::audio::output::{AudioOut, Clip};
@@ -83,7 +83,7 @@ impl Engine {
         audio: Box<dyn AudioOut>,
         now: Instant,
     ) -> Self {
-        let mut rng = settings.seed.map_or_else(StdRng::from_os_rng, StdRng::seed_from_u64);
+        let mut rng = settings.seed.map_or_else(rand::make_rng, StdRng::seed_from_u64);
         let noise_rng = StdRng::seed_from_u64(rng.next_u64());
         let first_gap = if settings.debug {
             DEBUG_FIRST_GAP
