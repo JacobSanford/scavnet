@@ -5,27 +5,44 @@ playback: sequence
 # replay: exhaust (each once per cycle, then restart) | once (each once, then silent)
 #         | repeat (independent picks; random only)
 replay: exhaust
+# Each chapter is cut at the long pauses in the original loop; gap_after puts hiss back there.
 conversations:
   - id: launch
     description: "Liftoff and the ride up."
     frequency: 296800000          # fixed: every chapter airs here
     items:
-      - id: mercury-launch
-        caption: "This is Liberty Bell 7. The clock is operating... It's a nice ride up to now."
-        file: mercury-launch.wav  # relative to this directory
+      - id: launch-1
+        caption: "This is Liberty Bell 7. The clock is operating."
+        file: mercury-launch-1.wav  # relative to this directory
+        gap_after: { min: 3, max: 5 }
+      - id: launch-2
+        caption: "Okay, it's a nice ride up to now."
+        file: mercury-launch-2.wav
+        gap_after: { min: 3, max: 6 }
+      - id: launch-3
+        caption: "The fuel is go... We're at 26 amps... Trajectory is good."
+        file: mercury-launch-3.wav
 
   - id: descent
     description: "Main chute and the landing bag."
     frequency: 296800000
     items:
-      - id: mercury-descent
-        caption: "Main chute is good... Hello, does anybody read Liberty Bell?"
-        file: mercury-descent.wav
+      - id: descent-1
+        caption: "Main chute is good... Landing bag is out, green."
+        file: mercury-descent-1.wav
+        gap_after: { min: 2, max: 4 }
+      - id: descent-2
+        caption: "Hello, does anybody read Liberty Bell?"
+        file: mercury-descent-2.wav
 
   - id: recovery
     description: "Recovery forces hail the capsule after splashdown."
     frequency: 296800000
     items:
-      - id: mercury-hail
+      - id: recovery-1
         caption: "Liberty Bell 7, Liberty Bell 7, this is Atlantic CapCom. Do you read me? Over."
-        file: mercury-hail.wav
+        file: mercury-hail-1.wav
+        gap_after: { min: 5, max: 12 }
+      - id: recovery-2
+        caption: "We have your entry into the water. We'll be over you in about 30 seconds."
+        file: mercury-hail-2.wav
