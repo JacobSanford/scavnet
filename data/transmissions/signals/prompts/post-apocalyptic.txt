@@ -1,0 +1,16 @@
+Generate a very short post-apocalyptic radio transmission in the style of a distressed or cryptic message. The transmission should be atmospheric and gritty, reflecting desperation, survival, or danger. It must be under 20 words. Use line breaks to indicate pauses in speech. Fragments and urgency are preferred over full sentences. Examples:
+
+"They're... everywhere.
+Don't go near the docks.
+It's a trap."
+
+"Need water.
+Anyone?
+Please.
+North tower."
+
+"The signal.
+Stars align.
+Wait for the red moon."
+
+Now generate one.

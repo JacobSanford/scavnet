@@ -1,0 +1,46 @@
+name: signals
+description: "Numbers stations, Morse and noise."
+playback: random
+replay: repeat
+conversations:
+  - id: static-burst
+    description: "Someone keys a mic and says nothing."
+    weight: 300
+    items:
+      - id: static-burst
+        file: static-burst.wav
+
+  - id: poacher
+    description: "The 'Poacher' numbers station (E3), interval tune then a five-figure call."
+    weight: 100
+    items:
+      - id: poacher
+        file: poacher.wav
+
+  - id: cherry-ripe
+    description: "'Cherry Ripe' numbers station, reading five-figure groups."
+    weight: 100
+    items:
+      - id: cherry-ripe
+        file: cherry-ripe.wav
+
+  - id: slot-machine
+    description: "The 'Slot Machine' numbers station on 8595 kHz."
+    weight: 100
+    items:
+      - id: slot-machine
+        file: slot-machine.wav
+
+  - id: the-buzzer
+    description: "UVB-76, 'The Buzzer', on 4630 kHz."
+    weight: 100
+    items:
+      - id: the-buzzer
+        file: the-buzzer.wav
+
+  - id: morse-psalm
+    description: "Morse code: Psalm 118."
+    weight: 100
+    items:
+      - id: morse-psalm
+        file: morse-psalm.wav

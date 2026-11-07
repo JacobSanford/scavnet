@@ -1,0 +1,19 @@
+name: nasa
+description: "Apollo air-to-ground loops."
+playback: random
+replay: repeat
+conversations:
+  - id: apollo-13-problem
+    description: "Apollo 13, 13 April 1970, after the oxygen tank failure."
+    # frequency: omitted, so each airing picks a random frequency on the networks.
+    items:
+      - id: apollo-13-problem
+        caption: "Okay, we've had a problem here."
+        file: apollo-13-problem.wav
+
+  - id: apollo-8-other-side
+    description: "Apollo 8, 24 December 1968, before loss of signal behind the Moon."
+    items:
+      - id: apollo-8-other-side
+        caption: "We'll see you on the other side."
+        file: apollo-8-other-side.wav

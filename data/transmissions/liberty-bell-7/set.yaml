@@ -1,0 +1,31 @@
+name: liberty-bell-7
+description: "Mercury-Redstone 4, 21 July 1961: Gus Grissom's flight, one chapter per airing."
+# playback: sequence (file order) | random (by conversation weight)
+playback: sequence
+# replay: exhaust (each once per cycle, then restart) | once (each once, then silent)
+#         | repeat (independent picks; random only)
+replay: exhaust
+conversations:
+  - id: launch
+    description: "Liftoff and the ride up."
+    frequency: 296800000          # fixed: every chapter airs here
+    items:
+      - id: mercury-launch
+        caption: "This is Liberty Bell 7. The clock is operating... It's a nice ride up to now."
+        file: mercury-launch.wav  # relative to this directory
+
+  - id: descent
+    description: "Main chute and the landing bag."
+    frequency: 296800000
+    items:
+      - id: mercury-descent
+        caption: "Main chute is good... Hello, does anybody read Liberty Bell?"
+        file: mercury-descent.wav
+
+  - id: recovery
+    description: "Recovery forces hail the capsule after splashdown."
+    frequency: 296800000
+    items:
+      - id: mercury-hail
+        caption: "Liberty Bell 7, Liberty Bell 7, this is Atlantic CapCom. Do you read me? Over."
+        file: mercury-hail.wav

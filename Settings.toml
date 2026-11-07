@@ -1,21 +1,25 @@
-debug = true
-
-[performance]
-screen_redraw_rate = 288
+# Every key is optional; unknown keys are errors. Relative paths resolve against this file.
+debug = false
+# seed = 42            # fixed seed for reproducible runs
 
 [paths]
-data_dir = "data"
-network_library = "networks.yaml"
-transmission_library = "transmissions/sets.yaml"
+data_dir = "data"                        # git-tracked world
+networks = "networks.yaml"               # relative to data_dir
+library = "transmissions/sets.yaml"      # relative to data_dir
+state_dir = "state"                      # playback progress (gitignored)
+cache_dir = "cache"                      # spectrum cache (gitignored, safe to delete)
+
+[display]
+redraw_hz = 30
+
+[scanner]
+frequencies_per_second = 80000
+
+[timings]                                # seconds
+transmission_gap = { min = 120.0, max = 240.0 }
+hiss_preroll = { min = 0.7, max = 1.1 }
+hiss_postroll = { min = 0.5, max = 2.0 }
 
 [volumes]
-transmission_sink_volume = 1.0
-hiss_whitenoise_sink_volume = 0.05
-
-[timings]
-transmission_gap_min_time = 120
-transmission_gap_max_time = 240
-hiss_preroll_min_time = 0.7
-hiss_preroll_max_time = 1.1
-hiss_postroll_min_time = 0.5
-hiss_postroll_max_time = 2.0
+transmission = 1.0
+hiss = 0.05

@@ -2,30 +2,26 @@
 name = "scavnet"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.88"
 
 [dependencies]
 anyhow = "1.0.102"
-chrono = "0.4.19"
-config = "0.15.5"
-cpal = "^0.15.3"
+chrono = { version = "0.4.39", default-features = false, features = ["clock"] }
+clap = { version = "4.6", features = ["derive"] }
 crossterm = "0.28.1"
-hound = "3.4.0"
-lazy_static = "1.5.0"
-openai_api_rust = "0.1.9"
-openai_dive = "0.7.1"
-parking_lot = "0.12.3"
-rand = "0.8"
-ratatui = { version = "0.29.0", features = ["unstable-rendered-line-info"] }
-rayon = "1.10.0"
-rmp-serde = "1.0"
+hound = "3.5.1"
+rand = "0.9"
+ratatui = "0.29.0"
 rodio = { version = "0.20.1", features = ["noise"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.34"
 spectrum-analyzer = "1.6.0"
-tokio = { version = "1.43.0", features = ["rt-multi-thread", "sync", "macros", "time"] }
-uuid = { version = "1.11.1", features = ["v4"] }
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
 
 [profile.release]
 lto = true
-opt-level = 3
 codegen-units = 1
+debug = true

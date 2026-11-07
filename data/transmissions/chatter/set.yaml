@@ -1,0 +1,10 @@
+name: chatter
+description: "Air traffic control."
+playback: random
+replay: repeat
+conversations:
+  - id: atc-precision-approach
+    description: "Italian military ATC vectors an aircraft onto a precision radar approach, 1989."
+    items:
+      - id: atc-precision-approach
+        file: atc-precision-approach.wav

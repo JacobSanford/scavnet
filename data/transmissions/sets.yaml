@@ -1,0 +1,14 @@
+# Weighted set tree. A group has `name`, `weight` and `sets`; a leaf has `set` (a directory
+# holding set.yaml, relative to this file) and `weight`. Weights are relative among siblings.
+# Every audio file is public domain or CC0; see CREDITS.md in each set directory.
+sets:
+  - name: stories
+    weight: 300
+    sets:
+      - { set: liberty-bell-7, weight: 100 }
+  - name: chatter
+    weight: 300
+    sets:
+      - { set: nasa, weight: 100 }
+      - { set: chatter, weight: 50 }
+  - { set: signals, weight: 300 }

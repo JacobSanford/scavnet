@@ -1,4 +1,3 @@
 /target
-/data
-/transmissions
-.fft
+/state
+/cache
