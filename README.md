@@ -44,6 +44,11 @@ Everything under `data/` is the world, and it is tracked in git. Nothing the eng
 
 Unknown keys are errors everywhere, so a typo fails `validate` instead of being silently ignored.
 
+### Demo audio and licensing
+The bundled world exists so a fresh clone runs. Every audio file in it is public domain or CC0. That includes NASA Mercury and Apollo air-to-ground audio, Italian ATC, numbers-station recordings, Morse and static from Wikimedia Commons. Each set directory has a `CREDITS.md` listing the author, licence, source and cut range for every file.
+
+Only commit audio you are allowed to redistribute. For licensed or private material, keep a separate world outside the repo and point `paths.data_dir` at it from your own settings file (`scavnet --settings mine.toml`).
+
 ### Networks (`data/networks.yaml`)
 Bands the scanner sweeps, in order. `end_freq` is inclusive and must lie on the `step` grid. Bands must not overlap.
 
