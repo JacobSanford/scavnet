@@ -50,8 +50,11 @@ impl NetworkSpec {
             out.push("start_freq must be greater than 0".to_string());
         }
         if self.start_freq >= self.end_freq {
-            out.push(format!("start_freq ({}) must be less than end_freq ({})", self.start_freq, self.end_freq));
-        } else if self.step > 0 && (self.end_freq - self.start_freq) % self.step != 0 {
+            out.push(format!(
+                "start_freq ({}) must be less than end_freq ({})",
+                self.start_freq, self.end_freq
+            ));
+        } else if self.step > 0 && !(self.end_freq - self.start_freq).is_multiple_of(self.step) {
             out.push(format!(
                 "end_freq - start_freq ({}) must be a multiple of step ({})",
                 self.end_freq - self.start_freq,
@@ -70,7 +73,11 @@ impl FrequencyPlan {
             problems.push("at least one network must be defined".to_string());
         }
         for (i, spec) in specs.iter().enumerate() {
-            let label = if spec.name.is_empty() { format!("networks[{i}]") } else { format!("network '{}'", spec.name) };
+            let label = if spec.name.is_empty() {
+                format!("networks[{i}]")
+            } else {
+                format!("network '{}'", spec.name)
+            };
             problems.extend(spec.problems().into_iter().map(|p| format!("{label}: {p}")));
             for other in &specs[..i] {
                 if other.name == spec.name {
@@ -89,7 +96,13 @@ impl FrequencyPlan {
         let mut offset = 0;
         for spec in specs {
             let count = (spec.end_freq - spec.start_freq) / spec.step + 1;
-            bands.push(Band { name: spec.name.clone(), start: spec.start_freq, step: spec.step, count, offset });
+            bands.push(Band {
+                name: spec.name.clone(),
+                start: spec.start_freq,
+                step: spec.step,
+                count,
+                offset,
+            });
             offset += count;
         }
         Ok(Self { bands, total: offset })
@@ -111,7 +124,7 @@ impl FrequencyPlan {
     pub fn index_of(&self, freq: u64) -> Option<u64> {
         self.bands.iter().find_map(|b| {
             let end = b.start + (b.count - 1) * b.step;
-            (freq >= b.start && freq <= end && (freq - b.start) % b.step == 0)
+            (freq >= b.start && freq <= end && (freq - b.start).is_multiple_of(b.step))
                 .then(|| b.offset + (freq - b.start) / b.step)
         })
     }
@@ -139,12 +152,20 @@ mod tests {
     use super::*;
 
     fn spec(name: &str, start: u64, end: u64, step: u64) -> NetworkSpec {
-        NetworkSpec { name: name.into(), start_freq: start, end_freq: end, step }
+        NetworkSpec {
+            name: name.into(),
+            start_freq: start,
+            end_freq: end,
+            step,
+        }
     }
 
     fn plan() -> FrequencyPlan {
-        FrequencyPlan::build(&[spec("pubnet", 25_000_000, 512_000_000, 1000), spec("scavnet", 758_000_000, 824_000_000, 1000)])
-            .unwrap()
+        FrequencyPlan::build(&[
+            spec("pubnet", 25_000_000, 512_000_000, 1000),
+            spec("scavnet", 758_000_000, 824_000_000, 1000),
+        ])
+        .unwrap()
     }
 
     #[test]

@@ -37,20 +37,22 @@ impl Progress {
             std::fs::create_dir_all(dir).with_context(|| format!("Failed to create {}", dir.display()))?;
         }
         let tmp = path.with_extension("yaml.tmp");
-        std::fs::write(&tmp, serde_yaml::to_string(self)?).with_context(|| format!("Failed to write {}", tmp.display()))?;
+        std::fs::write(&tmp, serde_yaml::to_string(self)?)
+            .with_context(|| format!("Failed to write {}", tmp.display()))?;
         std::fs::rename(&tmp, path).with_context(|| format!("Failed to replace {}", path.display()))?;
         Ok(())
     }
 
     /// Drops sets and conversation ids that no longer exist in the world.
     pub fn prune(&mut self, world: &World) {
-        self.played.retain(|name, ids| match world.sets.iter().find(|s| &s.name == name) {
-            Some(set) => {
-                ids.retain(|id| set.conversations.iter().any(|c| &c.id == id));
-                !ids.is_empty()
-            }
-            None => false,
-        });
+        self.played
+            .retain(|name, ids| match world.sets.iter().find(|s| &s.name == name) {
+                Some(set) => {
+                    ids.retain(|id| set.conversations.iter().any(|c| &c.id == id));
+                    !ids.is_empty()
+                }
+                None => false,
+            });
     }
 
     pub fn played(&self, set: &str) -> &[String] {
@@ -72,25 +74,30 @@ impl Progress {
         }
     }
 
+    /// Whether `set` has anything left to air.
+    pub fn has_next(&self, set: &Set) -> bool {
+        self.candidates(set).next().is_some()
+    }
+
     /// The next conversation index for `set`, or `None` if it has nothing left to air.
-    /// `in_flight` is a conversation id already chosen but not yet finished.
-    pub fn next_conversation(&self, set: &Set, in_flight: Option<&str>, rng: &mut impl Rng) -> Option<usize> {
-        let played = self.played(&set.name);
-        let candidates: Vec<usize> = set
-            .conversations
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| Some(c.id.as_str()) != in_flight)
-            .filter(|(_, c)| set.replay == Replay::Repeat || !played.contains(&c.id))
-            .map(|(i, _)| i)
-            .collect();
+    pub fn next_conversation(&self, set: &Set, rng: &mut impl Rng) -> Option<usize> {
         match set.playback {
-            Playback::Sequence => candidates.first().copied(),
+            Playback::Sequence => self.candidates(set).next(),
             Playback::Random => {
+                let candidates: Vec<usize> = self.candidates(set).collect();
                 let weights: Vec<u32> = candidates.iter().map(|&i| set.conversations[i].weight).collect();
                 pick_weighted(&weights, rng).map(|i| candidates[i])
             }
         }
+    }
+
+    fn candidates<'a>(&'a self, set: &'a Set) -> impl Iterator<Item = usize> + 'a {
+        let played = self.played(&set.name);
+        set.conversations
+            .iter()
+            .enumerate()
+            .filter(move |(_, c)| set.replay == Replay::Repeat || !played.contains(&c.id))
+            .map(|(i, _)| i)
     }
 }
 
@@ -130,7 +137,7 @@ mod tests {
     fn air(progress: &mut Progress, set: &Set, n: usize, rng: &mut StdRng) -> Vec<String> {
         (0..n)
             .map_while(|_| {
-                let i = progress.next_conversation(set, None, rng)?;
+                let i = progress.next_conversation(set, rng)?;
                 let id = set.conversations[i].id.clone();
                 progress.record(set, &id);
                 Some(id)
@@ -152,7 +159,8 @@ mod tests {
         let mut p = Progress::default();
         let mut rng = StdRng::seed_from_u64(0);
         assert_eq!(air(&mut p, &s, 5, &mut rng), ["a", "b"]);
-        assert_eq!(p.next_conversation(&s, None, &mut rng), None);
+        assert_eq!(p.next_conversation(&s, &mut rng), None);
+        assert!(!p.has_next(&s));
     }
 
     #[test]
@@ -181,11 +189,9 @@ mod tests {
         let s = set(Playback::Sequence, Replay::Exhaust, &["a", "b"]);
         let p = Progress::default();
         let mut rng = StdRng::seed_from_u64(0);
-        assert_eq!(p.next_conversation(&s, None, &mut rng), Some(0));
-        // Chosen but never recorded: the next run picks the same chapter.
-        assert_eq!(p.next_conversation(&s, None, &mut rng), Some(0));
-        // While "a" is in flight, the following chapter is offered instead.
-        assert_eq!(p.next_conversation(&s, Some("a"), &mut rng), Some(1));
+        assert_eq!(p.next_conversation(&s, &mut rng), Some(0));
+        // Chosen but never recorded: the next pick is the same chapter.
+        assert_eq!(p.next_conversation(&s, &mut rng), Some(0));
     }
 
     #[test]
@@ -200,7 +206,10 @@ mod tests {
         let mut loaded = Progress::load(&path).unwrap();
         assert_eq!(loaded, p);
 
-        let world = World { sets: vec![s], ..World::empty_for_tests() };
+        let world = World {
+            sets: vec![s],
+            ..World::empty_for_tests()
+        };
         loaded.prune(&world);
         assert_eq!(loaded.played("s"), ["a"]);
         assert!(loaded.played("gone").is_empty());
@@ -208,6 +217,9 @@ mod tests {
 
     #[test]
     fn missing_file_is_fresh_start() {
-        assert_eq!(Progress::load(Path::new("/nonexistent/progress.yaml")).unwrap(), Progress::default());
+        assert_eq!(
+            Progress::load(Path::new("/nonexistent/progress.yaml")).unwrap(),
+            Progress::default()
+        );
     }
 }

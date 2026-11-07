@@ -58,8 +58,10 @@ impl Library {
 }
 
 fn choose_among(nodes: &[Node], rng: &mut impl Rng, available: &impl Fn(usize) -> bool) -> Option<usize> {
-    let weights: Vec<u32> =
-        nodes.iter().map(|n| if n.any_available(available) { n.weight() } else { 0 }).collect();
+    let weights: Vec<u32> = nodes
+        .iter()
+        .map(|n| if n.any_available(available) { n.weight() } else { 0 })
+        .collect();
     let node = &nodes[pick_weighted(&weights, rng)?];
     match node {
         Node::Leaf { set, .. } => Some(*set),
@@ -116,7 +118,13 @@ mod tests {
     #[test]
     fn unavailable_branches_are_skipped() {
         let lib = Library {
-            roots: vec![Node::Group { weight: 1000, children: vec![leaf(1, 0), leaf(1, 1)] }, leaf(1, 2)],
+            roots: vec![
+                Node::Group {
+                    weight: 1000,
+                    children: vec![leaf(1, 0), leaf(1, 1)],
+                },
+                leaf(1, 2),
+            ],
         };
         let mut rng = StdRng::seed_from_u64(1);
         for _ in 0..100 {
@@ -127,10 +135,21 @@ mod tests {
 
     #[test]
     fn same_seed_same_choices() {
-        let lib = Library { roots: vec![leaf(3, 0), leaf(5, 1), Node::Group { weight: 2, children: vec![leaf(1, 2)] }] };
+        let lib = Library {
+            roots: vec![
+                leaf(3, 0),
+                leaf(5, 1),
+                Node::Group {
+                    weight: 2,
+                    children: vec![leaf(1, 2)],
+                },
+            ],
+        };
         let run = |seed| {
             let mut rng = StdRng::seed_from_u64(seed);
-            (0..50).map(|_| lib.choose(&mut rng, |_| true).unwrap()).collect::<Vec<_>>()
+            (0..50)
+                .map(|_| lib.choose(&mut rng, |_| true).unwrap())
+                .collect::<Vec<_>>()
         };
         assert_eq!(run(42), run(42));
     }

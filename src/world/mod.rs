@@ -52,8 +52,11 @@ impl World {
         let mut problems = Vec::new();
 
         let plan = read_yaml::<NetworksFile>(networks_path).and_then(|file| {
-            FrequencyPlan::build(&file.networks)
-                .map_err(|errs| errs.into_iter().map(|e| format!("{}: {e}", networks_path.display())).collect())
+            FrequencyPlan::build(&file.networks).map_err(|errs| {
+                errs.into_iter()
+                    .map(|e| format!("{}: {e}", networks_path.display()))
+                    .collect()
+            })
         });
         let plan = plan.map_err(|e| problems.extend(e)).ok();
 
@@ -61,11 +64,22 @@ impl World {
         let library = match read_yaml::<LibraryFile>(library_path) {
             Ok(file) => {
                 let base = library_path.parent().unwrap_or(Path::new(""));
-                let mut ctx = LoadCtx { library_path, base, plan: plan.as_ref(), sets: &mut sets, problems: &mut problems };
+                let mut ctx = LoadCtx {
+                    library_path,
+                    base,
+                    plan: plan.as_ref(),
+                    sets: &mut sets,
+                    problems: &mut problems,
+                };
                 if file.sets.is_empty() {
                     ctx.problem("sets must contain at least one entry".into());
                 }
-                let roots = file.sets.iter().enumerate().filter_map(|(i, n)| ctx.node(n, &format!("sets[{i}]"))).collect();
+                let roots = file
+                    .sets
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, n)| ctx.node(n, &format!("sets[{i}]")))
+                    .collect();
                 Library { roots }
             }
             Err(e) => {
@@ -77,7 +91,11 @@ impl World {
         let mut names = HashSet::new();
         for set in &sets {
             if !names.insert(set.name.as_str()) {
-                problems.push(format!("{}: set name '{}' is used by another set", set.file.display(), set.name));
+                problems.push(format!(
+                    "{}: set name '{}' is used by another set",
+                    set.file.display(),
+                    set.name
+                ));
             }
         }
 
@@ -97,8 +115,17 @@ impl World {
 
     #[cfg(test)]
     pub fn empty_for_tests() -> Self {
-        let net = networks::NetworkSpec { name: "n".into(), start_freq: 1000, end_freq: 2000, step: 10 };
-        World { plan: FrequencyPlan::build(&[net]).unwrap(), library: Library::default(), sets: Vec::new() }
+        let net = networks::NetworkSpec {
+            name: "n".into(),
+            start_freq: 1000,
+            end_freq: 2000,
+            step: 10,
+        };
+        World {
+            plan: FrequencyPlan::build(&[net]).unwrap(),
+            library: Library::default(),
+            sets: Vec::new(),
+        }
     }
 }
 
@@ -127,17 +154,28 @@ impl LoadCtx<'_> {
                 if children.is_empty() {
                     self.problem(format!("{at}: 'sets' must not be empty"));
                 }
-                let children =
-                    children.iter().enumerate().filter_map(|(i, c)| self.node(c, &format!("{at}.sets[{i}]"))).collect();
-                Some(Node::Group { weight: spec.weight, children })
+                let children = children
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, c)| self.node(c, &format!("{at}.sets[{i}]")))
+                    .collect();
+                Some(Node::Group {
+                    weight: spec.weight,
+                    children,
+                })
             }
             (None, Some(dir)) => {
                 if spec.name.is_some() {
-                    self.problem(format!("{at}: a leaf takes its name from {SET_FILE_NAME}; remove 'name'"));
+                    self.problem(format!(
+                        "{at}: a leaf takes its name from {SET_FILE_NAME}; remove 'name'"
+                    ));
                 }
                 let set = self.set(&self.base.join(dir).join(SET_FILE_NAME))?;
                 self.sets.push(set);
-                Some(Node::Leaf { weight: spec.weight, set: self.sets.len() - 1 })
+                Some(Node::Leaf {
+                    weight: spec.weight,
+                    set: self.sets.len() - 1,
+                })
             }
             (Some(_), Some(_)) => {
                 self.problem(format!("{at}: use either 'sets' (a group) or 'set' (a leaf), not both"));
@@ -158,7 +196,8 @@ impl LoadCtx<'_> {
         let spec = read_yaml::<SetFile>(file).map_err(|e| self.problems.extend(e)).ok()?;
         let mut problems = Vec::new();
         let set = resolve_set(spec, file, self.plan, &mut problems);
-        self.problems.extend(problems.into_iter().map(|p| format!("{}: {p}", file.display())));
+        self.problems
+            .extend(problems.into_iter().map(|p| format!("{}: {p}", file.display())));
         Some(set)
     }
 }
@@ -217,12 +256,29 @@ fn resolve_set(spec: SetFile, file: &Path, plan: Option<&FrequencyPlan>, problem
                 problems.push(format!("{at}: {}: {e}", path.display()));
                 0.0
             });
-            items.push(Item { id: item.id, caption: item.caption, path, duration, gap_after });
+            items.push(Item {
+                id: item.id,
+                caption: item.caption,
+                path,
+                duration,
+                gap_after,
+            });
         }
-        conversations.push(Conversation { id: c.id, weight: c.weight, frequency: c.frequency, items });
+        conversations.push(Conversation {
+            id: c.id,
+            weight: c.weight,
+            frequency: c.frequency,
+            items,
+        });
     }
 
-    Set { name: spec.name, file: file.to_path_buf(), playback: spec.playback, replay: spec.replay, conversations }
+    Set {
+        name: spec.name,
+        file: file.to_path_buf(),
+        playback: spec.playback,
+        replay: spec.replay,
+        conversations,
+    }
 }
 
 /// Duration in seconds from the WAV header, rejecting formats the spectrum analyser can't read.
@@ -273,7 +329,12 @@ pub mod test_support {
 
     pub fn write_wav(path: &Path, seconds: f32, rate: u32, channels: u16) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        let spec = hound::WavSpec { channels, sample_rate: rate, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate: rate,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
         let mut w = hound::WavWriter::create(path, spec).unwrap();
         let frames = (seconds * rate as f32) as u32;
         for n in 0..frames {
@@ -352,15 +413,25 @@ mod tests {
         assert_eq!(story.playback, Playback::Sequence);
         assert_eq!(story.conversations[0].frequency, Some(1500));
         assert!((story.conversations[0].items[0].duration - 0.5).abs() < 1e-3);
-        assert!((story.conversations[0].items[1].duration - 0.25).abs() < 1e-3, "stereo duration is per-channel");
-        assert_eq!(story.conversations[0].items[0].path, dir.path().join("transmissions/story/a.wav"));
+        assert!(
+            (story.conversations[0].items[1].duration - 0.25).abs() < 1e-3,
+            "stereo duration is per-channel"
+        );
+        assert_eq!(
+            story.conversations[0].items[0].path,
+            dir.path().join("transmissions/story/a.wav")
+        );
     }
 
     #[test]
     fn typo_in_enum_is_reported_with_path() {
         let dir = tempfile::tempdir().unwrap();
         sample_world(dir.path());
-        edit(&dir.path().join("transmissions/story/set.yaml"), "playback: sequence", "playback: sequense");
+        edit(
+            &dir.path().join("transmissions/story/set.yaml"),
+            "playback: sequence",
+            "playback: sequense",
+        );
         let e = errors(dir.path());
         assert!(e.contains("story/set.yaml") && e.contains("sequense"), "{e}");
     }
@@ -369,7 +440,11 @@ mod tests {
     fn unknown_field_is_reported() {
         let dir = tempfile::tempdir().unwrap();
         sample_world(dir.path());
-        edit(&dir.path().join("transmissions/noise/set.yaml"), "weight: 2", "wieght: 2");
+        edit(
+            &dir.path().join("transmissions/noise/set.yaml"),
+            "weight: 2",
+            "wieght: 2",
+        );
         assert!(errors(dir.path()).contains("wieght"));
     }
 
@@ -392,8 +467,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         sample_world(dir.path());
         let lib = dir.path().join("transmissions/sets.yaml");
-        std::fs::write(&lib, "sets:\n  - { set: story, weight: 0 }\n  - { set: story, weight: 1 }\n  - { weight: 1 }\n")
-            .unwrap();
+        std::fs::write(
+            &lib,
+            "sets:\n  - { set: story, weight: 0 }\n  - { set: story, weight: 1 }\n  - { weight: 1 }\n",
+        )
+        .unwrap();
         let e = errors(dir.path());
         assert!(e.contains("weight must be greater than 0"), "{e}");
         assert!(e.contains("referenced more than once"), "{e}");
@@ -412,7 +490,12 @@ mod tests {
     fn unsupported_wav_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("x.wav");
-        let spec = hound::WavSpec { channels: 1, sample_rate: 8000, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 8000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
         hound::WavWriter::create(&path, spec).unwrap().finalize().unwrap();
         assert_eq!(wav_duration(&path), Err("audio is empty".into()));
     }

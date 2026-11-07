@@ -16,7 +16,10 @@ impl Range {
 
     pub fn validate(&self) -> Result<(), String> {
         if !self.min.is_finite() || !self.max.is_finite() {
-            return Err(format!("min and max must be finite numbers (got {} .. {})", self.min, self.max));
+            return Err(format!(
+                "min and max must be finite numbers (got {} .. {})",
+                self.min, self.max
+            ));
         }
         if self.min < 0.0 {
             return Err(format!("min must not be negative (got {})", self.min));

@@ -30,7 +30,9 @@ pub enum Replay {
 #[serde(deny_unknown_fields)]
 pub struct SetFile {
     pub name: String,
+    /// For authors only; the engine does not read it.
     #[serde(default)]
+    #[allow(dead_code)]
     pub description: String,
     pub playback: Playback,
     pub replay: Replay,
@@ -41,7 +43,9 @@ pub struct SetFile {
 #[serde(deny_unknown_fields)]
 pub struct ConversationSpec {
     pub id: String,
+    /// For authors only; the engine does not read it.
     #[serde(default)]
+    #[allow(dead_code)]
     pub description: String,
     /// Relative pick weight under `playback: random`.
     #[serde(default = "default_weight")]

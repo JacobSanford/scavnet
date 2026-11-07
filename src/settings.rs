@@ -9,7 +9,7 @@ use crate::range::Range;
 
 pub const DEFAULT_SETTINGS_FILE: &str = "Settings.toml";
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Settings {
     /// Shows debug log lines and schedules the first transmission within seconds.
@@ -65,20 +65,6 @@ pub struct Volumes {
     pub hiss: f32,
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            debug: false,
-            seed: None,
-            paths: Paths::default(),
-            display: Display::default(),
-            scanner: Scanner::default(),
-            timings: Timings::default(),
-            volumes: Volumes::default(),
-        }
-    }
-}
-
 impl Default for Paths {
     fn default() -> Self {
         Self {
@@ -99,7 +85,9 @@ impl Default for Display {
 
 impl Default for Scanner {
     fn default() -> Self {
-        Self { frequencies_per_second: 80_000 }
+        Self {
+            frequencies_per_second: 80_000,
+        }
     }
 }
 
@@ -115,7 +103,10 @@ impl Default for Timings {
 
 impl Default for Volumes {
     fn default() -> Self {
-        Self { transmission: 1.0, hiss: 0.05 }
+        Self {
+            transmission: 1.0,
+            hiss: 0.05,
+        }
     }
 }
 
@@ -142,7 +133,10 @@ impl Settings {
 
     pub fn validate(&self) -> Result<()> {
         if !(1..=240).contains(&self.display.redraw_hz) {
-            bail!("display.redraw_hz must be between 1 and 240 (got {})", self.display.redraw_hz);
+            bail!(
+                "display.redraw_hz must be between 1 and 240 (got {})",
+                self.display.redraw_hz
+            );
         }
         if self.scanner.frequencies_per_second == 0 {
             bail!("scanner.frequencies_per_second must be greater than 0");
@@ -155,7 +149,10 @@ impl Settings {
         for (name, range) in ranges {
             range.validate().map_err(|e| anyhow::anyhow!("{name}: {e}"))?;
         }
-        for (name, v) in [("volumes.transmission", self.volumes.transmission), ("volumes.hiss", self.volumes.hiss)] {
+        for (name, v) in [
+            ("volumes.transmission", self.volumes.transmission),
+            ("volumes.hiss", self.volumes.hiss),
+        ] {
             if !(0.0..=4.0).contains(&v) {
                 bail!("{name} must be between 0.0 and 4.0 (got {v})");
             }

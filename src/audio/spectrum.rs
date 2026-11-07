@@ -29,13 +29,14 @@ pub struct Spectrum {
 }
 
 impl Spectrum {
+    #[cfg(test)]
     pub fn frame_count(&self) -> usize {
         self.frames.len() / BANDS
     }
 
     /// The frame playing `secs` into the clip, if any.
     pub fn frame_at(&self, secs: f32) -> Option<&[u8]> {
-        if !(secs >= 0.0) {
+        if secs.is_nan() || secs < 0.0 {
             return None;
         }
         let i = (secs / self.frame_secs) as usize;
@@ -72,10 +73,16 @@ fn read_mono(path: &Path) -> Result<(Vec<f32>, u32)> {
         hound::SampleFormat::Float => reader.samples::<f32>().collect::<Result<_, _>>()?,
         hound::SampleFormat::Int => {
             let scale = 1.0 / (1u64 << (spec.bits_per_sample - 1)) as f32;
-            reader.samples::<i32>().map(|s| s.map(|v| v as f32 * scale)).collect::<Result<_, _>>()?
+            reader
+                .samples::<i32>()
+                .map(|s| s.map(|v| v as f32 * scale))
+                .collect::<Result<_, _>>()?
         }
     };
-    let mono = interleaved.chunks_exact(channels).map(|frame| frame.iter().sum::<f32>() / channels as f32).collect();
+    let mono = interleaved
+        .chunks_exact(channels)
+        .map(|frame| frame.iter().sum::<f32>() / channels as f32)
+        .collect();
     Ok((mono, spec.sample_rate))
 }
 
@@ -111,7 +118,10 @@ fn analyze_samples(samples: &[f32], rate: u32) -> Spectrum {
             })
             .collect()
     };
-    Spectrum { frame_secs, frames: frames.into() }
+    Spectrum {
+        frame_secs,
+        frames: frames.into(),
+    }
 }
 
 /// FFT bin range `[lo, hi)` for each log-spaced band. Narrow low bands get at least one bin.
@@ -133,7 +143,11 @@ fn band_bins(rate: u32) -> Vec<(usize, usize)> {
 
 fn cache_path(wav: &Path, cache_dir: &Path) -> Result<PathBuf> {
     let meta = std::fs::metadata(wav).with_context(|| format!("Failed to stat {}", wav.display()))?;
-    let mtime = meta.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).unwrap_or_default();
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .unwrap_or_default();
     let canonical = wav.canonicalize().unwrap_or_else(|_| wav.to_path_buf());
     let identity = format!(
         "{}|{}|{}|{WINDOW}|{BANDS}|{MIN_HZ}|{MAX_HZ}|{FLOOR_DB}",
@@ -141,12 +155,16 @@ fn cache_path(wav: &Path, cache_dir: &Path) -> Result<PathBuf> {
         meta.len(),
         mtime.as_nanos()
     );
-    Ok(cache_dir.join("spectrum").join(format!("{:016x}.bin", fnv1a(identity.as_bytes()))))
+    Ok(cache_dir
+        .join("spectrum")
+        .join(format!("{:016x}.bin", fnv1a(identity.as_bytes()))))
 }
 
 /// Stable across builds and platforms, unlike `std::hash::DefaultHasher`.
 fn fnv1a(bytes: &[u8]) -> u64 {
-    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x0000_0100_0000_01b3))
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, &b| {
+        (h ^ u64::from(b)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
 }
 
 fn read_cache(path: &Path) -> Option<Spectrum> {
@@ -156,7 +174,10 @@ fn read_cache(path: &Path) -> Option<Spectrum> {
     let frame_secs = f32::from_le_bytes(header[4..8].try_into().ok()?);
     let bands = u32::from_le_bytes(header[8..12].try_into().ok()?) as usize;
     let valid = &header[..4] == MAGIC && bands == BANDS && frames.len() % BANDS == 0 && frame_secs > 0.0;
-    valid.then(|| Spectrum { frame_secs, frames: frames.into() })
+    valid.then(|| Spectrum {
+        frame_secs,
+        frames: frames.into(),
+    })
 }
 
 fn write_cache(path: &Path, spectrum: &Spectrum) -> Result<()> {
@@ -178,7 +199,9 @@ mod tests {
     use crate::world::test_support::write_wav;
 
     fn sine(hz: f32, rate: u32, secs: f32) -> Vec<f32> {
-        (0..(rate as f32 * secs) as usize).map(|n| (n as f32 * hz * std::f32::consts::TAU / rate as f32).sin()).collect()
+        (0..(rate as f32 * secs) as usize)
+            .map(|n| (n as f32 * hz * std::f32::consts::TAU / rate as f32).sin())
+            .collect()
     }
 
     fn peak_band(frame: &[u8]) -> usize {
@@ -188,7 +211,10 @@ mod tests {
     fn band_of(hz: f32, rate: u32) -> usize {
         let per_bin = rate as f32 / WINDOW as f32;
         let bin = (hz / per_bin).round() as usize;
-        band_bins(rate).iter().position(|&(lo, hi)| bin >= lo && bin < hi).unwrap()
+        band_bins(rate)
+            .iter()
+            .position(|&(lo, hi)| bin >= lo && bin < hi)
+            .unwrap()
     }
 
     #[test]
@@ -241,7 +267,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         for (bits, format) in [(24, hound::SampleFormat::Int), (32, hound::SampleFormat::Float)] {
             let path = dir.path().join(format!("{bits}.wav"));
-            let spec = hound::WavSpec { channels: 1, sample_rate: 8000, bits_per_sample: bits, sample_format: format };
+            let spec = hound::WavSpec {
+                channels: 1,
+                sample_rate: 8000,
+                bits_per_sample: bits,
+                sample_format: format,
+            };
             let mut w = hound::WavWriter::create(&path, spec).unwrap();
             for v in sine(440.0, 8000, 0.25) {
                 match format {

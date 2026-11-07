@@ -32,7 +32,11 @@ pub struct RodioOut {
 impl RodioOut {
     pub fn open() -> Result<Self, String> {
         let (stream, handle) = OutputStream::try_default().map_err(|e| e.to_string())?;
-        Ok(Self { _stream: stream, handle, sink: None })
+        Ok(Self {
+            _stream: stream,
+            handle,
+            sink: None,
+        })
     }
 }
 

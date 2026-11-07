@@ -46,7 +46,13 @@ impl ThreadLoader {
         std::thread::Builder::new().name("loader".into()).spawn(move || {
             for request in request_rx {
                 let clips = load(&request.files, &cache_dir);
-                if result_tx.send(LoadResult { ticket: request.ticket, clips }).is_err() {
+                if result_tx
+                    .send(LoadResult {
+                        ticket: request.ticket,
+                        clips,
+                    })
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -57,7 +63,9 @@ impl ThreadLoader {
 
 impl Loader for ThreadLoader {
     fn request(&mut self, request: LoadRequest) -> Result<(), String> {
-        self.requests.send(request).map_err(|_| "loader thread has stopped".to_string())
+        self.requests
+            .send(request)
+            .map_err(|_| "loader thread has stopped".to_string())
     }
 
     fn poll(&mut self) -> Option<LoadResult> {
@@ -77,7 +85,10 @@ pub fn load(files: &[PathBuf], cache_dir: &Path) -> Result<Vec<LoadedClip>, Stri
                 }
                 let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
                 let spectrum = Spectrum::load_or_analyze(path, cache_dir).map_err(|e| format!("{e:#}"))?;
-                let clip = LoadedClip { bytes: bytes.into(), spectrum };
+                let clip = LoadedClip {
+                    bytes: bytes.into(),
+                    spectrum,
+                };
                 seen.insert(path, clip.clone());
                 Ok(clip)
             })
@@ -98,8 +109,18 @@ mod tests {
         let wav = dir.path().join("a.wav");
         write_wav(&wav, 0.25, 8000, 1);
         let mut loader = ThreadLoader::spawn(dir.path().join("cache")).unwrap();
-        loader.request(LoadRequest { ticket: 1, files: vec![dir.path().join("missing.wav")] }).unwrap();
-        loader.request(LoadRequest { ticket: 2, files: vec![wav.clone(), wav] }).unwrap();
+        loader
+            .request(LoadRequest {
+                ticket: 1,
+                files: vec![dir.path().join("missing.wav")],
+            })
+            .unwrap();
+        loader
+            .request(LoadRequest {
+                ticket: 2,
+                files: vec![wav.clone(), wav],
+            })
+            .unwrap();
 
         let mut results = Vec::new();
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -115,8 +136,13 @@ mod tests {
             Err(e) => assert!(e.contains("missing.wav"), "{e}"),
             Ok(_) => panic!("missing file should fail"),
         }
-        let Ok(clips) = &results[1].clips else { panic!("load should succeed") };
+        let Ok(clips) = &results[1].clips else {
+            panic!("load should succeed")
+        };
         assert_eq!(clips.len(), 2);
-        assert!(Arc::ptr_eq(&clips[0].bytes, &clips[1].bytes), "duplicate files are loaded once");
+        assert!(
+            Arc::ptr_eq(&clips[0].bytes, &clips[1].bytes),
+            "duplicate files are loaded once"
+        );
     }
 }
