@@ -16,7 +16,8 @@ redraw_hz = 30
 frequencies_per_second = 80000
 
 [timings]                                # seconds
-transmission_gap = { min = 120.0, max = 240.0 }
+first_transmission = { min = 3.0, max = 10.0 }   # after startup
+transmission_gap = { min = 120.0, max = 240.0 }   # after each airing
 hiss_preroll = { min = 0.7, max = 1.1 }
 hiss_postroll = { min = 0.5, max = 2.0 }
 

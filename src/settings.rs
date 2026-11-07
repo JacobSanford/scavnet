@@ -12,7 +12,7 @@ pub const DEFAULT_SETTINGS_FILE: &str = "Settings.toml";
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Settings {
-    /// Shows debug log lines and schedules the first transmission within seconds.
+    /// Shows debug log lines.
     pub debug: bool,
     /// Fixed RNG seed for reproducible runs. Omit for a random seed.
     pub seed: Option<u64>,
@@ -53,6 +53,9 @@ pub struct Scanner {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Timings {
+    /// Delay from startup to the first transmission.
+    pub first_transmission: Range,
+    /// Delay from the end of one transmission to the next.
     pub transmission_gap: Range,
     pub hiss_preroll: Range,
     pub hiss_postroll: Range,
@@ -94,6 +97,7 @@ impl Default for Scanner {
 impl Default for Timings {
     fn default() -> Self {
         Self {
+            first_transmission: Range::new(3.0, 10.0),
             transmission_gap: Range::new(120.0, 240.0),
             hiss_preroll: Range::new(0.7, 1.1),
             hiss_postroll: Range::new(0.5, 2.0),
@@ -142,6 +146,7 @@ impl Settings {
             bail!("scanner.frequencies_per_second must be greater than 0");
         }
         let ranges = [
+            ("timings.first_transmission", &self.timings.first_transmission),
             ("timings.transmission_gap", &self.timings.transmission_gap),
             ("timings.hiss_preroll", &self.timings.hiss_preroll),
             ("timings.hiss_postroll", &self.timings.hiss_postroll),

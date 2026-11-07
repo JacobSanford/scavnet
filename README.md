@@ -113,7 +113,7 @@ OPENAI_API_KEY=... cargo run --features generate -- generate signals \
 Every key is optional. Relative paths resolve against the settings file.
 
 ```toml
-debug = false        # debug log lines; first transmission within 3-5 s
+debug = false        # debug log lines
 # seed = 42          # fixed seed: the same world and seed air the same sequence
 
 [paths]
@@ -130,7 +130,8 @@ redraw_hz = 30                           # screen refresh; does not affect scan 
 frequencies_per_second = 80000
 
 [timings]                                # seconds
-transmission_gap = { min = 120.0, max = 240.0 }
+first_transmission = { min = 3.0, max = 10.0 }   # after startup
+transmission_gap = { min = 120.0, max = 240.0 }   # after each airing
 hiss_preroll = { min = 0.7, max = 1.1 }
 hiss_postroll = { min = 0.5, max = 2.0 }
 

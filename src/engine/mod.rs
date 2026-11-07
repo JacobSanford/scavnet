@@ -17,7 +17,6 @@ use rand::{Rng, RngExt, SeedableRng};
 use crate::audio::loader::{LoadRequest, LoadedClip, Loader};
 use crate::audio::output::{AudioOut, Clip};
 use crate::audio::spectrum::BANDS;
-use crate::range::Range;
 use crate::settings::Settings;
 use crate::world::progress::Progress;
 use crate::world::World;
@@ -25,8 +24,6 @@ use log::Log;
 use scanner::Scanner;
 use timeline::{Segment, Timeline};
 
-/// First transmission delay in debug mode, so there is something to watch right away.
-const DEBUG_FIRST_GAP: Range = Range::new(3.0, 5.0);
 /// Peak of the idle noise floor and of hiss on the 0–255 chart scale.
 const NOISE_PEAK: u8 = 13;
 const HISS_PEAK: u8 = 33;
@@ -85,12 +82,7 @@ impl Engine {
     ) -> Self {
         let mut rng = settings.seed.map_or_else(rand::make_rng, StdRng::seed_from_u64);
         let noise_rng = StdRng::seed_from_u64(rng.next_u64());
-        let first_gap = if settings.debug {
-            DEBUG_FIRST_GAP
-        } else {
-            settings.timings.transmission_gap
-        };
-        let next_request_at = now + secs(first_gap.sample(&mut rng));
+        let next_request_at = now + secs(settings.timings.first_transmission.sample(&mut rng));
         let scanner = Scanner::new(world.plan.total(), settings.scanner.frequencies_per_second);
         let mut log = Log::new(settings.debug);
         log.debug(|| format!("Debug mode on. Seed: {:?}", settings.seed));
@@ -405,12 +397,16 @@ mod tests {
     }
 
     fn harness(seed: u64, fail: bool) -> Harness {
+        harness_with(seed, fail, 10.0)
+    }
+
+    fn harness_with(seed: u64, fail: bool, first: f32) -> Harness {
         let dir = tempfile::tempdir().unwrap();
         let (net, lib) = sample_world(dir.path());
         let world = World::load(&net, &lib).unwrap();
         let mut settings = Settings::parse(&format!(
             "seed = {seed}\n[scanner]\nfrequencies_per_second = 1000\n[timings]\n\
-             transmission_gap = {{ min = 10.0, max = 10.0 }}\nhiss_preroll = {{ min = 0.5, max = 0.5 }}\n\
+             first_transmission = {{ min = {first}, max = {first} }}\ntransmission_gap = {{ min = 10.0, max = 10.0 }}\nhiss_preroll = {{ min = 0.5, max = 0.5 }}\n\
              hiss_postroll = {{ min = 0.5, max = 0.5 }}\n"
         ))
         .unwrap();
@@ -438,6 +434,16 @@ mod tests {
             now,
             _dir: dir,
         }
+    }
+
+    #[test]
+    fn first_transmission_uses_its_own_delay() {
+        let h = harness_with(1, false, 2.0);
+        assert_eq!(
+            h.engine.next_request_at,
+            h.now + secs(2.0),
+            "not the 10 s transmission_gap"
+        );
     }
 
     impl Harness {
