@@ -1,5 +1,7 @@
 mod audio;
 mod engine;
+#[cfg(feature = "generate")]
+mod generate;
 mod range;
 mod settings;
 mod ui;
@@ -37,6 +39,9 @@ enum Command {
     Validate,
     /// Precompute the spectrum profile of every item into the cache directory.
     Cache,
+    /// Author a conversation with OpenAI into a set (needs OPENAI_API_KEY).
+    #[cfg(feature = "generate")]
+    Generate(generate::GenerateArgs),
 }
 
 fn main() -> ExitCode {
@@ -56,6 +61,8 @@ fn run_cli() -> Result<ExitCode> {
         Command::Run => run(settings),
         Command::Validate => validate(&settings),
         Command::Cache => warm_cache(&settings),
+        #[cfg(feature = "generate")]
+        Command::Generate(args) => generate::run(&settings, args).map(|()| ExitCode::SUCCESS),
     }
 }
 
